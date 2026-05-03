@@ -1,0 +1,55 @@
+# GRACE Review Report
+
+Mode: $REVIEW_MODE
+Scope: $REVIEW_SCOPE
+Files reviewed: $FILES_REVIEWED
+Issues found: $ISSUES_TOTAL (critical: $CRITICAL_COUNT, minor: $MINOR_COUNT)
+
+## Contract Compliance
+
+- Contract source: $CONTRACT_SOURCE
+- Result: $CONTRACT_RESULT
+- Notes: $CONTRACT_NOTES
+
+## Semantic Markup
+
+- Module contracts: $MODULE_CONTRACT_RESULT
+- Function contracts: $FUNCTION_CONTRACT_RESULT
+- Block pairing: $BLOCK_PAIRING_RESULT
+- Notes: $MARKUP_NOTES
+
+## Graph And Plan Consistency
+
+- Graph refs checked: $GRAPH_REFS
+- Verification refs checked: $VERIFICATION_REFS
+- Result: $GRAPH_PLAN_RESULT
+
+## Verification Evidence
+
+- Commands reviewed: $COMMANDS_REVIEWED
+- Deterministic assertions: $DETERMINISTIC_RESULT
+- Trace/log evidence: $TRACE_RESULT
+- Branch observability (distinguishable markers per behavior-changing branch per `rules/grace-logging.md`): $BRANCH_OBSERVABILITY_RESULT
+- Required markers: $REQUIRED_MARKERS_RESULT
+
+## Diagnostic Trio
+
+- Logs: $LOGS_FINDING
+- Code: $CODE_FINDING
+- Data: $DATA_FINDING
+
+## Critical Issues
+
+- $CRITICAL_ISSUE_1
+
+## Minor Issues
+
+- $MINOR_ISSUE_1
+
+## Escalation
+
+$ESCALATION_DECISION
+
+## Summary
+
+$PASS_OR_FAIL

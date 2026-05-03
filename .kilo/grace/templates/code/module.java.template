@@ -1,0 +1,58 @@
+// FILE: $MODULE_PATH
+// VERSION: 0.1.0
+// START_MODULE_CONTRACT
+//   PURPOSE: $MODULE_PURPOSE
+//   SCOPE: $MODULE_SCOPE
+//   DEPENDS: $MODULE_DEPENDS
+//   LINKS: $GRAPH_LINKS
+// END_MODULE_CONTRACT
+//
+// START_MODULE_MAP
+//   $CLASS_NAME - $CLASS_PURPOSE
+//   $EXPORTED_SYMBOL - $EXPORTED_SYMBOL_PURPOSE
+// END_MODULE_MAP
+//
+// START_CHANGE_SUMMARY
+//   LAST_CHANGE: v0.1.0 - Первичный каркас Java GRACE-модуля.
+// END_CHANGE_SUMMARY
+
+package $PACKAGE_NAME;
+
+import java.util.Map;
+
+public final class $CLASS_NAME {
+    public record Result<T>(boolean ok, T value, String error) {}
+
+    private $CLASS_NAME() {}
+
+    private static void logGraceMarker(String marker, Map<String, Object> fields) {
+        // Замените на проектный логгер. Маркер должен оставаться стабильным для проверки.
+        System.out.println(marker + " " + fields);
+    }
+
+    // START_CONTRACT: $EXPORTED_SYMBOL
+    //   PURPOSE: $FUNCTION_PURPOSE
+    //   INPUTS: { input: $INPUT_TYPE - $INPUT_DESCRIPTION }
+    //   OUTPUTS: { Result<$OUTPUT_TYPE> - $OUTPUT_DESCRIPTION }
+    //   SIDE_EFFECTS: Пишет стабильный GRACE log-marker.
+    //   LINKS: $FUNCTION_LINKS
+    // END_CONTRACT: $EXPORTED_SYMBOL
+    public static Result<$OUTPUT_TYPE> $EXPORTED_SYMBOL($INPUT_TYPE input) {
+        // START_BLOCK_VALIDATE_INPUT
+        if (input == null) {
+            logGraceMarker("[$MODULE_NAME][$EXPORTED_SYMBOL][BLOCK_VALIDATE_INPUT] invalid input", Map.of(
+                "reason", "INPUT_REQUIRED"
+            ));
+            return new Result<>(false, null, "INPUT_REQUIRED");
+        }
+        // END_BLOCK_VALIDATE_INPUT
+
+        // START_BLOCK_BUILD_RESULT
+        $OUTPUT_TYPE value = $BUILD_VALUE;
+        logGraceMarker("[$MODULE_NAME][$EXPORTED_SYMBOL][BLOCK_BUILD_RESULT] result built", Map.of(
+            "status", "ok"
+        ));
+        return new Result<>(true, value, null);
+        // END_BLOCK_BUILD_RESULT
+    }
+}

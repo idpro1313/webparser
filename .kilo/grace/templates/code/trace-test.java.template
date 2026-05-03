@@ -1,0 +1,52 @@
+// FILE: $TEST_PATH
+// VERSION: 0.1.0
+// START_MODULE_CONTRACT
+//   PURPOSE: Проверяет детерминированный результат и GRACE trace evidence для $MODULE_NAME.
+//   SCOPE: $SCENARIO_NAME
+//   DEPENDS: $MODULE_UNDER_TEST
+//   LINKS: $VERIFICATION_REF
+// END_MODULE_CONTRACT
+//
+// START_MODULE_MAP
+//   $TEST_CLASS_NAME - Test class for $MODULE_NAME trace verification.
+//   $TEST_METHOD_NAME - Проверяет результат и обязательные trace markers.
+// END_MODULE_MAP
+//
+// START_CHANGE_SUMMARY
+//   LAST_CHANGE: v0.1.0 - Первичный каркас Java trace-test проверки.
+// END_CHANGE_SUMMARY
+
+package $PACKAGE_NAME;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
+import org.junit.jupiter.api.Test;
+
+final class $TEST_CLASS_NAME {
+    // START_CONTRACT: $TEST_METHOD_NAME
+    //   PURPOSE: Доказывает, что результат сценария и путь выполнения соответствуют verification plan.
+    //   INPUTS: { фикстуры и захваченные маркеры }
+    //   OUTPUTS: { свидетельство успешного или неуспешного прохождения }
+    //   SIDE_EFFECTS: нет, кроме локальных фикстур теста
+    //   LINKS: $VERIFICATION_REF
+    // END_CONTRACT: $TEST_METHOD_NAME
+    @Test
+    void $TEST_METHOD_NAME() {
+        // START_BLOCK_EXECUTE_SCENARIO
+        List<String> capturedMarkers = List.of();
+        var result = $CALL_MODULE_UNDER_TEST;
+        // END_BLOCK_EXECUTE_SCENARIO
+
+        // START_BLOCK_ASSERT_OUTCOME
+        assertEquals($EXPECTED_RESULT, result);
+        // END_BLOCK_ASSERT_OUTCOME
+
+        // START_BLOCK_ASSERT_TRACE
+        assertTrue(capturedMarkers.contains("$REQUIRED_MARKER"));
+        assertFalse(capturedMarkers.contains("$FORBIDDEN_MARKER"));
+        // END_BLOCK_ASSERT_TRACE
+    }
+}

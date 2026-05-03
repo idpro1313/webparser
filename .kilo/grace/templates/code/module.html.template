@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- FILE: $MODULE_PATH -->
+<!-- VERSION: 0.1.0 -->
+<!-- START_MODULE_CONTRACT
+  PURPOSE: $MODULE_PURPOSE
+  SCOPE: $MODULE_SCOPE
+  DEPENDS: $MODULE_DEPENDS
+  LINKS: $GRAPH_LINKS
+END_MODULE_CONTRACT -->
+<!-- START_MODULE_MAP
+  $DOM_SURFACE - $DOM_SURFACE_PURPOSE
+END_MODULE_MAP -->
+<!-- START_CHANGE_SUMMARY
+  LAST_CHANGE: v0.1.0 - Первичный каркас HTML-разметки с GRACE-якорями.
+END_CHANGE_SUMMARY -->
+<html lang="$LANG">
+  <head>
+    <meta charset="utf-8" />
+    <title>$PAGE_TITLE</title>
+  </head>
+  <body>
+    <!-- Замените $PRIMARY_BLOCK на один XML/code-safe идентификатор блока без пробелов; имена START/END должны совпадать. -->
+    <!-- START_BLOCK_$PRIMARY_BLOCK -->
+    <main id="$ROOT_ID">
+      $CONTENT
+    </main>
+    <!-- END_BLOCK_$PRIMARY_BLOCK -->
+  </body>
+</html>

@@ -1,0 +1,67 @@
+# FILE: $MODULE_PATH
+# VERSION: 0.1.0
+# START_MODULE_CONTRACT
+#   PURPOSE: $MODULE_PURPOSE
+#   SCOPE: $MODULE_SCOPE
+#   DEPENDS: $MODULE_DEPENDS
+#   LINKS: $GRAPH_LINKS
+# END_MODULE_CONTRACT
+#
+# START_MODULE_MAP
+#   $EXPORTED_SYMBOL - $EXPORTED_SYMBOL_PURPOSE
+# END_MODULE_MAP
+#
+# START_CHANGE_SUMMARY
+#   LAST_CHANGE: v0.1.0 - Первичный каркас GRACE-модуля.
+# END_CHANGE_SUMMARY
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass
+from typing import Generic, TypeVar
+
+
+logger = logging.getLogger(__name__)
+T = TypeVar("T")
+
+
+@dataclass(frozen=True)
+class Result(Generic[T]):
+    ok: bool
+    value: T | None = None
+    error: str | None = None
+
+
+def _log_grace_marker(marker: str, **fields: object) -> None:
+    # Замените на проектный логгер. Маркер должен оставаться стабильным для проверки.
+    logger.info("%s %s", marker, fields)
+
+
+# START_CONTRACT: $EXPORTED_SYMBOL
+#   PURPOSE: $FUNCTION_PURPOSE
+#   INPUTS: { input_value: $INPUT_TYPE - $INPUT_DESCRIPTION }
+#   OUTPUTS: { Result[$OUTPUT_TYPE] - $OUTPUT_DESCRIPTION }
+#   SIDE_EFFECTS: Пишет стабильный GRACE log-marker.
+#   LINKS: $FUNCTION_LINKS
+# END_CONTRACT: $EXPORTED_SYMBOL
+def $EXPORTED_SYMBOL(input_value: $INPUT_TYPE) -> Result[$OUTPUT_TYPE]:
+    """Выполняет основное преобразование модуля согласно GRACE-контракту."""
+
+    # START_BLOCK_VALIDATE_INPUT
+    if input_value is None:
+        _log_grace_marker(
+            "[$MODULE_NAME][$EXPORTED_SYMBOL][BLOCK_VALIDATE_INPUT] invalid input",
+            reason="INPUT_REQUIRED",
+        )
+        return Result(ok=False, error="INPUT_REQUIRED")
+    # END_BLOCK_VALIDATE_INPUT
+
+    # START_BLOCK_BUILD_RESULT
+    value = input_value
+    _log_grace_marker(
+        "[$MODULE_NAME][$EXPORTED_SYMBOL][BLOCK_BUILD_RESULT] result built",
+        status="ok",
+    )
+    return Result(ok=True, value=value)
+    # END_BLOCK_BUILD_RESULT
