@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DevelopmentPlan VERSION="0.2.0">
+  <ArchitectureNotes>
+    <objective>Надёжный single-URL парсинг с фоном через BullMQ, ИИ через OpenAI-compatible API, результат в Markdown.</objective>
+    <non-goal>Распределённые multi-tenant SaaS и полный краулинг сайта в v1.</non-goal>
+    <risk-1>Внешние сети и LLM недетерминированы — нужны таймауты и явные outcome ветви.</risk-1>
+    <criteria>Тестируемость core без Redis; observability по веткам; чёткое разделение API/worker/domain.</criteria>
+    <alternatives-considered>Монолит Next.js только; только CLI без UI.</alternatives-considered>
+    <selected-concept>Монорепо Fastify API + BullMQ worker + общий packages/core для контрактов и тестов.</selected-concept>
+  </ArchitectureNotes>
+
+  <Modules>
+    <M-CONFIG NAME="Config" TYPE="UTILITY" LAYER="0" ORDER="1" STATUS="implemented">
+      <contract>
+        <purpose>Загрузка и валидация env (Redis URL, OUTPUT_DIR, OPENAI-compatible настройки, таймауты).</purpose>
+        <inputs>
+          <param name="process.env" type="NodeJS.ProcessEnv" />
+        </inputs>
+        <outputs>
+          <param name="AppConfig" type="AppConfig" />
+        </outputs>
+        <errors>
+          <error code="CONFIG_INVALID">Отсутствует обязательная переменная или неверный формат числа.</error>
+        </errors>
+      </contract>
+      <interface>
+        <export-loadAppConfig PURPOSE="Возвращает валидированный конфиг" />
+        <export-typeAppConfig PURPOSE="Тип конфигурации приложения" />
+      </interface>
+      <depends>нет</depends>
+      <target>
+        <source>packages/core/src/config.ts</source>
+        <tests>packages/core/src/config.test.ts</tests>
+      </target>
+      <observability>
+        <log-prefix>[Config]</log-prefix>
+        <critical-block>BLOCK_LOAD_CONFIG</critical-block>
+        <branch-markers>BLOCK_LOAD_CONFIG success|missing_redis_url|missing_output_dir</branch-markers>
+      </observability>
+      <verification-ref>V-M-CONFIG</verification-ref>
+      <notes>
+        <note-1>Секреты не сериализуются из config в логи.</note-1>
+      </notes>
+    </M-CONFIG>
+
+    <M-LOGGER NAME="StructuredLoggerFactory" TYPE="UTILITY" LAYER="0" ORDER="2" STATUS="implemented">
+      <contract>
+        <purpose>Фабрика pino-подобного логгера со стабильными полями correlationId/jobId.</purpose>
+        <inputs />
+        <outputs />
+        <errors />
+      </contract>
+      <interface>
+        <export-createLogger PURPOSE="Создаёт именованный logger" />
+      </interface>
+      <depends>M-CONFIG</depends>
+      <target>
+        <source>packages/core/src/logger.ts</source>
+        <tests />
+      </target>
+      <observability />
+      <verification-ref>V-M-LOGGER</verification-ref>
+    </M-LOGGER>
+
+    <M-WEBSITE-FETCHER NAME="WebsiteFetcher" TYPE="INTEGRATION" LAYER="1" ORDER="1" STATUS="implemented">
+      <contract>
+        <purpose>HTTP GET страницы с таймаутом и лимитом размера тела.</purpose>
+        <inputs>
+          <param name="url" type="URL" />
+        </inputs>
+        <outputs>
+          <param name="result" type="FetchedPage" />
+        </outputs>
+        <errors>
+          <error code="FETCH_TIMEOUT" />
+          <error code="FETCH_TOO_LARGE" />
+          <error code="FETCH_NETWORK" />
+        </errors>
+      </contract>
+      <interface>
+        <export-fetchPage PURPOSE="Скачивает HTML" />
+      </interface>
+      <depends>M-CONFIG, M-LOGGER</depends>
+      <target>
+        <source>packages/core/src/website-fetcher.ts</source>
+        <tests>packages/core/src/website-fetcher.test.ts</tests>
+      </target>
+      <observability>
+        <log-prefix>[WebsiteFetcher]</log-prefix>
+        <critical-block>BLOCK_FETCH_PAGE</critical-block>
+        <branch-markers>BLOCK_FETCH_PAGE success|timeout|network_error|too_large</branch-markers>
+      </observability>
+      <verification-ref>V-M-WEBSITE-FETCHER</verification-ref>
+    </M-WEBSITE-FETCHER>
+
+    <M-CONTENT-EXTRACTOR NAME="ContentExtractor" TYPE="CORE_LOGIC" LAYER="1" ORDER="2" STATUS="implemented">
+      <contract>
+        <purpose>Извлекает заголовок, основной текст, метаданные из HTML.</purpose>
+        <inputs />
+        <outputs />
+        <errors />
+      </contract>
+      <interface>
+        <export-extractMainContent PURPOSE="Выдаёт ExtractedDocument" />
+      </interface>
+      <depends>M-LOGGER</depends>
+      <target>
+        <source>packages/core/src/content-extractor.ts</source>
+        <tests>packages/core/src/content-extractor.test.ts</tests>
+      </target>
+      <observability>
+        <critical-block>BLOCK_EXTRACT_CONTENT</critical-block>
+        <branch-markers>sufficient|insufficient</branch-markers>
+      </observability>
+      <verification-ref>V-M-CONTENT-EXTRACTOR</verification-ref>
+    </M-CONTENT-EXTRACTOR>
+
+    <M-AI-ADAPTER NAME="AiSelectionAdapter" TYPE="INTEGRATION" LAYER="1" ORDER="3" STATUS="implemented">
+      <contract>
+        <purpose>Вызов OpenAI-compatible `/v1/chat/completions`; парсинг JSON с «суть / ключевые факты».</purpose>
+        <inputs />
+        <outputs />
+        <errors>
+          <error code="AI_PROVIDER_ERROR" />
+          <error code="AI_INVALID_RESPONSE" />
+        </errors>
+      </contract>
+      <interface>
+        <export-selectKeyInformation PURPOSE="Возвращает структуру StructuredSelection" />
+      </interface>
+      <depends>M-CONFIG, M-LOGGER</depends>
+      <target>
+        <source>packages/core/src/ai-adapter.ts</source>
+        <tests>packages/core/src/ai-adapter.test.ts</tests>
+      </target>
+      <observability>
+        <critical-block>BLOCK_AI_SELECTION</critical-block>
+        <branch-markers>success|provider_error|invalid_response</branch-markers>
+      </observability>
+      <verification-ref>V-M-AI-ADAPTER</verification-ref>
+    </M-AI-ADAPTER>
+
+    <M-MARKDOWN-EXPORTER NAME="MarkdownExporter" TYPE="DATA_LAYER" LAYER="1" ORDER="4" STATUS="implemented">
+      <contract>
+        <purpose>Запись index.md, pages/*.md в OUTPUT_DIR/jobId.</purpose>
+        <inputs />
+        <outputs />
+        <errors>
+          <error code="EXPORT_WRITE_ERROR" />
+        </errors>
+      </contract>
+      <interface>
+        <export-writeResultFiles PURPOSE="Записывает MD файлы" />
+      </interface>
+      <depends>M-LOGGER</depends>
+      <target>
+        <source>packages/core/src/markdown-exporter.ts</source>
+        <tests>packages/core/src/markdown-exporter.test.ts</tests>
+      </target>
+      <observability>
+        <critical-block>BLOCK_EXPORT_MARKDOWN</critical-block>
+        <branch-markers>success|write_error</branch-markers>
+      </observability>
+      <verification-ref>V-M-MARKDOWN-EXPORTER</verification-ref>
+    </M-MARKDOWN-EXPORTER>
+
+    <M-JOB-ORCHESTRATOR NAME="ParseJobOrchestrator" TYPE="CORE_LOGIC" LAYER="2" ORDER="1" STATUS="implemented">
+      <contract>
+        <purpose>Единый сценарий: validate URL → fetch → extract → AI → markdown; без ложного success.</purpose>
+        <inputs />
+        <outputs>
+          <param name="OrchestrationResult" type="OrchestrationResult" />
+        </outputs>
+        <errors />
+      </contract>
+      <interface>
+        <export-runParseJob PURPOSE="Запуск одной задачи парсинга" />
+      </interface>
+      <depends>M-WEBSITE-FETCHER, M-CONTENT-EXTRACTOR, M-AI-ADAPTER, M-MARKDOWN-EXPORTER, M-LOGGER</depends>
+      <target>
+        <source>packages/core/src/orchestrator.ts</source>
+        <tests>packages/core/src/orchestrator.test.ts</tests>
+      </target>
+      <observability>
+        <critical-block>BLOCK_VALIDATE_REQUEST</critical-block>
+        <branch-markers>BLOCK_VALIDATE_REQUEST accepted|rejected</branch-markers>
+      </observability>
+      <verification-ref>V-M-JOB-ORCHESTRATOR</verification-ref>
+    </M-JOB-ORCHESTRATOR>
+
+    <M-JOB-QUEUE NAME="ParseJobQueueAdapter" TYPE="INTEGRATION" LAYER="2" ORDER="2" STATUS="implemented">
+      <contract>
+        <purpose>BullMQ Queue: постановка job с payload URL + correlationId.</purpose>
+        <inputs />
+        <outputs />
+        <errors />
+      </contract>
+      <interface>
+        <export-createParseQueue PURPOSE="Фабрика очереди" />
+        <export-enqueueParseJob PURPOSE="Ставит job в очередь" />
+      </interface>
+      <depends>M-CONFIG, M-LOGGER</depends>
+      <target>
+        <source>apps/api/src/queue.ts</source>
+        <tests />
+      </target>
+      <observability>
+        <branch-markers>BLOCK_ENQUEUE success|enqueue_error</branch-markers>
+      </observability>
+      <verification-ref>V-M-JOB-QUEUE</verification-ref>
+    </M-JOB-QUEUE>
+
+    <M-HTTP-API NAME="HttpApiServer" TYPE="ENTRY_POINT" LAYER="3" ORDER="1" STATUS="implemented">
+      <contract>
+        <purpose>REST: GET /api/health, GET /api/ready (Redis), POST /api/jobs, GET /api/jobs/:id, GET /api/jobs/:id/files.</purpose>
+        <inputs />
+        <outputs />
+        <errors />
+      </contract>
+      <interface />
+      <depends>M-JOB-QUEUE, M-CONFIG, M-LOGGER</depends>
+      <target>
+        <source>apps/api/src/index.ts</source>
+        <tests />
+      </target>
+      <observability>
+        <branch-markers>BLOCK_API_CREATE_JOB, BLOCK_API_GET_JOB, BLOCK_REDIS_PROBE success|rejected, BLOCK_SHUTDOWN start|done|error</branch-markers>
+      </observability>
+      <verification-ref>V-M-HTTP-API</verification-ref>
+    </M-HTTP-API>
+
+    <M-WORKER-ENTRY NAME="ParseWorkerProcess" TYPE="ENTRY_POINT" LAYER="3" ORDER="2" STATUS="implemented">
+      <contract>
+        <purpose>BullMQ Worker: вызывает runParseJob и записывает returnvalue с путями.</purpose>
+        <inputs />
+        <outputs />
+        <errors />
+      </contract>
+      <interface />
+      <depends>M-JOB-ORCHESTRATOR, M-CONFIG, M-LOGGER</depends>
+      <target>
+        <source>apps/worker/src/index.ts</source>
+        <tests />
+      </target>
+      <observability>
+        <branch-markers>BLOCK_WORKER_JOB_SUCCESS|BLOCK_WORKER_JOB_FAILED|BLOCK_SHUTDOWN start|done|worker_close_error</branch-markers>
+      </observability>
+      <verification-ref>V-M-WORKER-ENTRY</verification-ref>
+    </M-WORKER-ENTRY>
+
+    <M-WEB-UI NAME="WebConsole" TYPE="UI_COMPONENT" LAYER="3" ORDER="3" STATUS="implemented">
+      <contract>
+        <purpose>Форма URL, список/статус job, отображение ошибок пользователю.</purpose>
+        <inputs />
+        <outputs />
+        <errors />
+      </contract>
+      <interface />
+      <depends>M-HTTP-API (HTTP)</depends>
+      <target>
+        <source>apps/web/src</source>
+        <tests />
+      </target>
+      <verification-ref>V-M-WEB-UI</verification-ref>
+    </M-WEB-UI>
+  </Modules>
+
+  <DataFlow>
+    <DF-001 NAME="ParseSingleUrl" TRIGGER="HTTP POST create job">
+      <step-1>API нормализует URL и валидирует схему</step-1>
+      <step-2>Создаётся BullMQ job с jobId коррелирующим correlationId</step-2>
+      <step-3>Worker: fetch страницы (ветви timeout/error/large)</step-3>
+      <step-4>Extract main content sufficient|insufficient</step-4>
+      <step-5>AI selection success|provider_error|invalid_response</step-5>
+      <step-6>Markdown exporter success|write_error</step-6>
+      <evidence>По журналам: цепочка маркеров от BLOCK_VALIDATE_REQUEST до BLOCK_EXPORT_MARKDOWN; соответствие verification-plan VF-001/VF-002</evidence>
+    </DF-001>
+  </DataFlow>
+
+  <ImplementationOrder>
+    <Phase-1 name="GRACE_artifacts_and_core_foundations" status="done">
+      <goal>docs + config/logger + модульные тесты extract/markdown</goal>
+      <step-1 module="M-CONFIG" status="done" verification="V-M-CONFIG">Config + тесты</step-1>
+      <step-2 module="M-LOGGER" status="done" verification="V-M-LOGGER">Logger factory</step-2>
+      <step-3 module="M-CONTENT-EXTRACTOR" status="done" verification="V-M-CONTENT-EXTRACTOR">Extractor + тесты</step-3>
+      <step-4 module="M-MARKDOWN-EXPORTER" status="done" verification="V-M-MARKDOWN-EXPORTER">Exporter + тесты</step-4>
+    </Phase-1>
+    <Phase-2 name="integration_and_orchestration" status="done">
+      <goal>fetch + AI + orchestrator + unit tests с моками</goal>
+      <step-1 module="M-WEBSITE-FETCHER" status="done" verification="V-M-WEBSITE-FETCHER">Fetcher</step-1>
+      <step-2 module="M-AI-ADAPTER" status="done" verification="V-M-AI-ADAPTER">AI adapter</step-2>
+      <step-3 module="M-JOB-ORCHESTRATOR" status="done" verification="V-M-JOB-ORCHESTRATOR">Orchestrator</step-3>
+    </Phase-2>
+    <Phase-3 name="queue_api_worker_ui" status="done">
+      <goal>Redis queue, API, worker, React UI</goal>
+      <step-1 module="M-JOB-QUEUE" status="done" verification="V-M-JOB-QUEUE">BullMQ queue helper</step-1>
+      <step-2 module="M-HTTP-API" status="done" verification="V-M-HTTP-API">Fastify</step-2>
+      <step-3 module="M-WORKER-ENTRY" status="done" verification="V-M-WORKER-ENTRY">Worker</step-3>
+      <step-4 module="M-WEB-UI" status="done" verification="V-M-WEB-UI">Vite React</step-4>
+    </Phase-3>
+  </ImplementationOrder>
+
+  <ExecutionPolicy>
+    <default-profile>balanced</default-profile>
+    <controller-owns>docs/development-plan.xml, docs/knowledge-graph.xml, docs/verification-plan.xml</controller-owns>
+    <worker-owns>packages/core/src/*, apps/api/src/*, apps/worker/src/*, apps/web/src/*</worker-owns>
+    <max-fix-attempts-per-step>2</max-fix-attempts-per-step>
+  </ExecutionPolicy>
+</DevelopmentPlan>

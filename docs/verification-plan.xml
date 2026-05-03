@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VerificationPlan VERSION="0.2.0">
+  <GlobalPolicy>
+    <log-format>[Module][function][BLOCK_NAME] message</log-format>
+    <strict-ldd-format>[CLASSIFIER][IMP:7-8][FUNCTION][BLOCK][OPERATION] Description [STATUS]</strict-ldd-format>
+    <strict-ldd-when>Загрузка страницы, вызов LLM, экспорт на диск.</strict-ldd-when>
+    <deterministic-first>true</deterministic-first>
+    <redaction>Не логировать API keys / токены.</redaction>
+  </GlobalPolicy>
+
+  <CriticalFlows>
+    <VF-001 NAME="HappyPathSingleUrl" USE_CASES="UC-001,UC-002,UC-003" DATA_FLOW="DF-001" PRIORITY="high">
+      <scenario>Валидный https URL, успешный fetch, достаточный контент, корректный JSON от модели, успешная запись MD.</scenario>
+      <expected-outcome>Bull job completed; есть index.md и хотя бы один page md.</expected-outcome>
+      <required-signals>
+        <log-marker>[JobOrchestrator][runParseJob][BLOCK_VALIDATE_REQUEST]</log-marker>
+        <log-marker>[WebsiteFetcher][fetchPage][BLOCK_FETCH_PAGE]</log-marker>
+        <log-marker>[ContentExtractor][extractMainContent][BLOCK_EXTRACT_CONTENT]</log-marker>
+        <log-marker>[AiAdapter][selectKeyInformation][BLOCK_AI_SELECTION]</log-marker>
+        <log-marker>[MarkdownExporter][writeResultFiles][BLOCK_EXPORT_MARKDOWN]</log-marker>
+        <trace-sequence>BLOCK_VALIDATE_REQUEST accepted → BLOCK_FETCH_PAGE success → BLOCK_EXTRACT_CONTENT sufficient → BLOCK_AI_SELECTION success → BLOCK_EXPORT_MARKDOWN success</trace-sequence>
+      </required-signals>
+    </VF-001>
+
+    <VF-002 NAME="RejectedUrl" USE_CASES="UC-001" DATA_FLOW="DF-001" PRIORITY="high">
+      <scenario>Невалидный URL (не http/https) при создании задачи.</scenario>
+      <expected-outcome>HTTP 400 или job не ставится; маркер BLOCK_VALIDATE_REQUEST rejected в core path (API валидирует до enqueue).</expected-outcome>
+      <required-signals>
+        <log-marker>[HttpApi][createJobHandler][BLOCK_API_VALIDATE_BODY] rejected</log-marker>
+      </required-signals>
+    </VF-002>
+
+    <VF-003 NAME="FetchFailure" USE_CASES="UC-003" DATA_FLOW="DF-001" PRIORITY="high">
+      <scenario>Таймаут или сетевой отказ при fetch.</scenario>
+      <expected-outcome>Job failed; маркеры fetch ветви timeout или network_error; нет успешного BLOCK_EXPORT_MARKDOWN success.</expected-outcome>
+      <required-signals>
+        <log-marker>[WebsiteFetcher][fetchPage][BLOCK_FETCH_PAGE]</log-marker>
+        <required-trace-assertions>
+          <assertion-1>После ветви timeout или network_error не должно последовать BLOCK_EXPORT_MARKDOWN success в том же успешном job.</assertion-1>
+        </required-trace-assertions>
+      </required-signals>
+    </VF-003>
+  </CriticalFlows>
+
+  <ModuleVerification>
+    <V-M-CONFIG MODULE="M-CONFIG" PRIORITY="high">
+      <test-files>
+        <file>packages/core/src/config.test.ts</file>
+      </test-files>
+      <module-checks>
+        <check-1>npm run test -w @webparser/core -- src/config.test.ts</check-1>
+      </module-checks>
+      <scenarios>
+        <scenario-1 kind="failure">При отсутствии REDIS_URL — выброс/результат ошибки конфигурации.</scenario-1>
+      </scenarios>
+      <required-log-markers />
+    </V-M-CONFIG>
+
+    <V-M-LOGGER MODULE="M-LOGGER" PRIORITY="low">
+      <test-files />
+      <module-checks />
+      <scenarios>
+        <scenario-1 kind="success">Фабрика возвращает логгер без выброса.</scenario-1>
+      </scenarios>
+      <required-log-markers />
+    </V-M-LOGGER>
+
+    <V-M-WEBSITE-FETCHER MODULE="M-WEBSITE-FETCHER" PRIORITY="high">
+      <test-files>
+        <file>packages/core/src/website-fetcher.test.ts</file>
+      </test-files>
+      <module-checks>
+        <check-1>npm run test -w @webparser/core -- src/website-fetcher.test.ts</check-1>
+      </module-checks>
+      <scenarios>
+        <scenario-1 kind="success">Mock fetch возвращает HTML в лимите.</scenario-1>
+        <scenario-2 kind="failure">Abort/timeout маркер timeout.</scenario-2>
+      </scenarios>
+      <required-log-markers>
+        <marker-1>[WebsiteFetcher][fetchPage][BLOCK_FETCH_PAGE]</marker-1>
+      </required-log-markers>
+    </V-M-WEBSITE-FETCHER>
+
+    <V-M-CONTENT-EXTRACTOR MODULE="M-CONTENT-EXTRACTOR" PRIORITY="high">
+      <test-files>
+        <file>packages/core/src/content-extractor.test.ts</file>
+      </test-files>
+      <module-checks>
+        <check-1>npm run test -w @webparser/core -- src/content-extractor.test.ts</check-1>
+      </module-checks>
+      <scenarios>
+        <scenario-1 kind="success">HTML с title и body текстом даёт sufficient.</scenario-1>
+        <scenario-2 kind="alternate">Пустой body даёт insufficient.</scenario-2>
+      </scenarios>
+      <required-log-markers>
+        <marker-1>[ContentExtractor][extractMainContent][BLOCK_EXTRACT_CONTENT]</marker-1>
+      </required-log-markers>
+    </V-M-CONTENT-EXTRACTOR>
+
+    <V-M-AI-ADAPTER MODULE="M-AI-ADAPTER" PRIORITY="high">
+      <test-files>
+        <file>packages/core/src/ai-adapter.test.ts</file>
+      </test-files>
+      <module-checks>
+        <check-1>npm run test -w @webparser/core -- src/ai-adapter.test.ts</check-1>
+      </module-checks>
+      <scenarios>
+        <scenario-1 kind="success">Фейковый HTTP ответ с JSON телом сообщения модели.</scenario-1>
+        <scenario-2 kind="failure">Невалидный JSON сообщения модели → invalid_response.</scenario-2>
+      </scenarios>
+      <required-log-markers>
+        <marker-1>[AiAdapter][selectKeyInformation][BLOCK_AI_SELECTION]</marker-1>
+      </required-log-markers>
+    </V-M-AI-ADAPTER>
+
+    <V-M-MARKDOWN-EXPORTER MODULE="M-MARKDOWN-EXPORTER" PRIORITY="high">
+      <test-files>
+        <file>packages/core/src/markdown-exporter.test.ts</file>
+      </test-files>
+      <module-checks>
+        <check-1>npm run test -w @webparser/core -- src/markdown-exporter.test.ts</check-1>
+      </module-checks>
+      <scenarios>
+        <scenario-1 kind="success">Запись файлов в tmp директорию.</scenario-1>
+      </scenarios>
+      <required-log-markers>
+        <marker-1>[MarkdownExporter][writeResultFiles][BLOCK_EXPORT_MARKDOWN]</marker-1>
+      </required-log-markers>
+    </V-M-MARKDOWN-EXPORTER>
+
+    <V-M-JOB-ORCHESTRATOR MODULE="M-JOB-ORCHESTRATOR" PRIORITY="high">
+      <test-files>
+        <file>packages/core/src/orchestrator.test.ts</file>
+      </test-files>
+      <module-checks>
+        <check-1>npm run test -w @webparser/core -- src/orchestrator.test.ts</check-1>
+      </module-checks>
+      <scenarios>
+        <scenario-1 kind="success">Мок всех шагов — completed.</scenario-1>
+        <scenario-2 kind="failure">Мок insufficient content — failed без успешного export success.</scenario-2>
+      </scenarios>
+      <required-log-markers>
+        <marker-1>[JobOrchestrator][runParseJob][BLOCK_VALIDATE_REQUEST]</marker-1>
+      </required-log-markers>
+    </V-M-JOB-ORCHESTRATOR>
+
+    <V-M-JOB-QUEUE MODULE="M-JOB-QUEUE" PRIORITY="medium">
+      <module-checks>
+        <check-1>E2E: поднять Redis + worker + enqueue через HTTP (manual smoke)</check-1>
+      </module-checks>
+      <required-log-markers>
+        <marker-1>[JobQueueAdapter][enqueueParseJob][BLOCK_ENQUEUE]</marker-1>
+      </required-log-markers>
+    </V-M-JOB-QUEUE>
+
+    <V-M-HTTP-API MODULE="M-HTTP-API" PRIORITY="medium">
+      <module-checks>
+        <check-1>Smoke: GET /api/health → 200 JSON ok; при поднятом Redis GET /api/ready → 200 с redis:true</check-1>
+      </module-checks>
+      <scenarios>
+        <scenario-1 kind="health">Без зависимостей Redis: GET /api/health возвращает 200.</scenario-1>
+        <scenario-2 kind="readiness_redis_ok">Redis отвечает PONG: GET /api/ready → 200 и JSON redis:true.</scenario-2>
+        <scenario-3 kind="readiness_redis_bad">Redis недоступен: GET /api/ready → 503 и маркер [HttpApi][GET /api/ready][BLOCK_REDIS_PROBE] rejected.</scenario-3>
+      </scenarios>
+      <required-log-markers>
+        <marker-1>[HttpApi][createJobHandler][BLOCK_API_VALIDATE_BODY]</marker-1>
+        <marker-2>[HttpApi][GET /api/ready][BLOCK_REDIS_PROBE]</marker-2>
+        <marker-3>[HttpApi][shutdown][BLOCK_SHUTDOWN]</marker-3>
+      </required-log-markers>
+    </V-M-HTTP-API>
+
+    <V-M-WORKER-ENTRY MODULE="M-WORKER-ENTRY" PRIORITY="medium">
+      <required-log-markers>
+        <marker-1>[ParseWorker][processor][BLOCK_WORKER_JOB_SUCCESS]</marker-1>
+        <marker-2>[ParseWorker][processor][BLOCK_WORKER_JOB_FAILED]</marker-2>
+        <marker-3>[ParseWorker][shutdown][BLOCK_SHUTDOWN]</marker-3>
+      </required-log-markers>
+    </V-M-WORKER-ENTRY>
+
+    <V-M-WEB-UI MODULE="M-WEB-UI" PRIORITY="low">
+      <scenarios>
+        <scenario-1 kind="success">Smoke: отправка формы без JS ошибок.</scenario-1>
+      </scenarios>
+      <required-log-markers />
+    </V-M-WEB-UI>
+  </ModuleVerification>
+
+  <PhaseGates>
+    <Gate-Phase-1 PHASE="Phase-1">
+      <goal>Core unit tests green.</goal>
+      <commands>
+        <command-1>npm run test -w @webparser/core</command-1>
+      </commands>
+      <required-evidence>
+        <evidence-1>Все маркеры V-M-* для Phase-1 связаны с тестами.</evidence-1>
+      </required-evidence>
+    </Gate-Phase-1>
+  </PhaseGates>
+</VerificationPlan>

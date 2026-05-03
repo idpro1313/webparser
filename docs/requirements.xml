@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RequirementsAnalysis VERSION="0.2.0">
+  <Project>
+    <name>webparser</name>
+    <annotation>Умный парсер сайтов с ИИ-выборкой сути и сохранением в Markdown; web UI, API и фоновая очередь.</annotation>
+    <keywords>web-parser, openai-compatible, markdown, bullmq, extraction</keywords>
+  </Project>
+
+  <Actors>
+    <actor-User>Конечный пользователь интерфейса: запускает задачу парсинга, смотрит статус.</actor-User>
+    <actor-System>Фоновый worker: выполняет fetch → extract → AI → export MD.</actor-System>
+  </Actors>
+
+  <UseCases>
+    <UC-001>
+      <Actor>User</Actor>
+      <Action>Создаёт задачу парсинга по URL через UI или API</Action>
+      <Goal>Система поставила в очередь job и вернула идентификатор задачи</Goal>
+      <Preconditions>Валидный URL разрешённого протокола (https/http); конфиг очереди (Redis) доступен</Preconditions>
+      <AcceptanceCriteria>POST создания job возвращает jobId и далее job видна в состоянии ожидания/выполнения</AcceptanceCriteria>
+      <Priority>high</Priority>
+      <RelatedFlows>DF-001</RelatedFlows>
+    </UC-001>
+
+    <UC-002>
+      <Actor>User</Actor>
+      <Action>Запрашивает статус задачи</Action>
+      <Goal>Видеть completed/failed/active и понятную причину сбоя</Goal>
+      <Preconditions>Существует jobId</Preconditions>
+      <AcceptanceCriteria>GET статус возвращает state и без утечки секретов (API ключи не в теле ответа)</AcceptanceCriteria>
+      <Priority>high</Priority>
+      <RelatedFlows>DF-001</RelatedFlows>
+    </UC-002>
+
+    <UC-003>
+      <Actor>System</Actor>
+      <Action>Выполняет конвейер fetch → извлечение текста → AI-структурирование → запись Markdown</Action>
+      <Goal>В директории вывода созданы файлы MD (обзор + страницы) без ложного «успеха» при пустом контенте</Goal>
+      <Preconditions>Настроены AI baseUrl/model (или задача может завершиться с частичным результатом по политике)</Preconditions>
+      <AcceptanceCriteria>Успешный job создаёт index.md и pages/*.md с метаданными источника; ветви ошибок имеют наблюдаемые маркеры в логах</AcceptanceCriteria>
+      <Priority>high</Priority>
+      <RelatedFlows>DF-001</RelatedFlows>
+    </UC-003>
+
+    <UC-004>
+      <Actor>User</Actor>
+      <Action>Скачивает или открывает сгенерированные Markdown-файлы</Action>
+      <Goal>Получить читаемую выжимку и основные факты с URL источника</Goal>
+      <Preconditions>Job completed</Preconditions>
+      <AcceptanceCriteria>Файлы доступны по стабильным путям относительно output root (например через API list или локальный volume)</AcceptanceCriteria>
+      <Priority>medium</Priority>
+      <RelatedFlows>DF-001</RelatedFlows>
+    </UC-004>
+  </UseCases>
+
+  <NonGoals>
+    <item-1>Массовый краулер всего сайта с глубиной &gt;1 и sitemap в v1 (только single-URL; расширение отдельным эпиком).</item-1>
+    <item-2>Публичный SaaS, multi-tenant auth, биллинг в v1.</item-2>
+    <item-3>Любые REST API кроме OpenAI-compatible Chat Completions в v1.</item-3>
+  </NonGoals>
+
+  <Constraints>
+    <constraint-1>Секреты (API keys) только в env; никогда не логировать и не отдавать в ответах API.</constraint-1>
+    <constraint-2>На критических ветвях fetch/extract/AI/export — различимые log markers (см. rules/grace-logging.md).</constraint-2>
+    <constraint-3>Очередь: Redis + BullMQ; worker отдельный процесс от API.</constraint-3>
+  </Constraints>
+
+  <Risks>
+    <risk-1>Нестабильные внешние сайты и таймауты fetch.</risk-1>
+    <risk-2>Модель возвращает невалидный JSON — нужна явная ветка invalid_response.</risk-2>
+  </Risks>
+
+  <OpenQuestions>
+    <question-1>Нужна ли в будущем поддержка прокси/Basic auth для целевых сайтов?</question-1>
+  </OpenQuestions>
+</RequirementsAnalysis>

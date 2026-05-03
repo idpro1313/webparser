@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OperationalPackets VERSION="0.1.0">
+  <ExecutionPacketTemplate>
+    <ExecutionPacket>
+      <module-id>M-X</module-id>
+      <module-name>Placeholder</module-name>
+      <purpose>Workers read packets from docs/development-plan.xml + verification excerpts.</purpose>
+      <write-scope />
+      <contract-excerpt><![CDATA[See docs/development-plan.xml for module contracts.]]></contract-excerpt>
+      <graph-entry-excerpt><![CDATA[See docs/knowledge-graph.xml.]]></graph-entry-excerpt>
+      <dependency-contract-summaries />
+      <verification-excerpt><![CDATA[See docs/verification-plan.xml V-M-* entries.]]></verification-excerpt>
+      <assumptions />
+      <stop-conditions>
+        <condition-1>New external dependency requires replan approval.</condition-1>
+      </stop-conditions>
+      <retry-budget>2</retry-budget>
+      <checkpoint-fields>
+        <field-1>assumptions-kept</field-1>
+        <field-2>commands-run</field-2>
+        <field-3>evidence-captured</field-3>
+        <field-4>next-action</field-4>
+      </checkpoint-fields>
+      <notes>
+        <note-1>При добавлении веток — обновить required-log-markers в verification-plan.xml.</note-1>
+      </notes>
+    </ExecutionPacket>
+  </ExecutionPacketTemplate>
+
+  <GraphDeltaTemplate>
+    <GraphDelta module="M-EXAMPLE">
+      <imports-added />
+      <imports-removed />
+      <exports-added />
+      <exports-removed />
+      <annotations-added />
+      <annotations-removed />
+      <cross-links-added />
+      <cross-links-removed />
+    </GraphDelta>
+  </GraphDeltaTemplate>
+
+  <FailurePacketTemplate>
+    <FailurePacket>
+      <scenario>Example</scenario>
+      <contract-ref>V-M-*</contract-ref>
+      <expected-evidence />
+      <observed-evidence />
+      <first-divergent-block />
+      <suggested-next-action />
+    </FailurePacket>
+  </FailurePacketTemplate>
+</OperationalPackets>

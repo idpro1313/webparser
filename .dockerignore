@@ -1,0 +1,14 @@
+**/node_modules/
+**/dist/
+output/
+**/output/
+.git/
+.gitignore
+.env
+.env.*
+!.env.docker.example
+coverage/
+.cursor/
+.kilo/
+**/.vite/
+*.log

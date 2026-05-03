@@ -1,0 +1,12 @@
+{
+  "name": "webparser",
+  "private": true,
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "build": "npm run build -w @webparser/core && npm run build -w @webparser/api && npm run build -w @webparser/worker && npm run build -w @webparser/web",
+    "test": "npm run test -w @webparser/core",
+    "dev:api": "npm run dev -w @webparser/api",
+    "dev:worker": "npm run dev -w @webparser/worker",
+    "dev:web": "npm run dev -w @webparser/web"
+  }
+}

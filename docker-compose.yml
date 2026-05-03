@@ -1,0 +1,70 @@
+x-app-build: &app-build
+  context: .
+  dockerfile: docker/Dockerfile.app
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  api:
+    build: *app-build
+    image: webparser-app:latest
+    restart: unless-stopped
+    command: ["node", "apps/api/dist/index.js"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379
+      OUTPUT_DIR: /data/output
+      API_PORT: "3000"
+    env_file:
+      - .env.docker
+    volumes:
+      - webparser_output:/data/output
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "/app/scripts/api-healthcheck.cjs"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  worker:
+    build: *app-build
+    image: webparser-app:latest
+    restart: unless-stopped
+    command: ["node", "apps/worker/dist/index.js"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379
+      OUTPUT_DIR: /data/output
+    env_file:
+      - .env.docker
+    volumes:
+      - webparser_output:/data/output
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    image: webparser-web:latest
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+
+volumes:
+  webparser_output:

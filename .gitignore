@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.output/
+output/
+*.log
+.env
+.env.local
+.env.docker
+.DS_Store
+coverage/
+*.tsbuildinfo

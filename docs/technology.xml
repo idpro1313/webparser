@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TechnologyStack VERSION="0.2.0">
+  <Runtime>Node.js 22.x</Runtime>
+  <Language>TypeScript 5.7.x</Language>
+  <Framework>Fastify 4.x (apps/api), React 18 + Vite 6 (apps/web)</Framework>
+
+  <Dependencies>
+    <dep name="bullmq" purpose="Фоновая очередь задач парсинга" />
+    <dep name="ioredis" purpose="Клиент Redis для BullMQ" />
+    <dep name="node-html-parser" purpose="Разбор HTML и извлечение текста" />
+    <dep name="pino" purpose="Структурированные логи" />
+    <dep name="@fastify/cors" purpose="CORS для dev UI" />
+    <dep name="vitest" purpose="Unit-тесты core" />
+  </Dependencies>
+
+  <VersionConstraints>
+    <constraint lib="typescript" reason="Строгий TS для монорепо" />
+  </VersionConstraints>
+
+  <Tooling>
+    <tool name="workspace" value="npm workspaces" />
+    <tool name="package-manager" value="npm (Node 22+)" />
+    <tool name="test-runner" value="vitest" />
+  </Tooling>
+
+  <PreferredAgentStack>
+    <preferred-runtime-library>@mozilla/readability (optional later) или эвристика на node-html-parser</preferred-runtime-library>
+    <preferred-test-library>vitest</preferred-test-library>
+    <preferred-observability-library>pino</preferred-observability-library>
+    <discouraged-surface reason="Сложнее контракт">прямое обращение к LLM без адаптера INTEGRATION</discouraged-surface>
+  </PreferredAgentStack>
+
+  <Testing>
+    <module-level>
+      <command>npm run test -w @webparser/core</command>
+      <focus>Оркестратор, extract, markdown, AI stub</focus>
+    </module-level>
+    <wave-level>
+      <command>npm run build -w @webparser/api &amp;&amp; npm exec -w @webparser/api -- tsc --noEmit</command>
+      <focus>Типизация приложений после смен поверхности core</focus>
+    </wave-level>
+    <phase-level>
+      <command>npm test</command>
+      <focus>Все Workspace пакеты</focus>
+    </phase-level>
+    <mocking-policy>Фейковые fetch/ответы модели через DI и тест-хелперы; без monkey-patch глобалов где возможно.</mocking-policy>
+  </Testing>
+
+  <Observability>
+    <logger>pino (apps/api и apps/worker); core принимает child logger или log interface</logger>
+    <log-format>[Module][function][BLOCK_NAME] message</log-format>
+    <branch-observability-policy>JobOrchestrator, WebsiteFetcher, ContentExtractor, AiAdapter, MarkdownExporter — маркеры на каждую ветку исхода (success/error/skip).</branch-observability-policy>
+    <required-fields>correlationId (jobId), branch/outcome где уместно</required-fields>
+    <redaction>Never log secrets, credentials, raw high-risk payloads.</redaction>
+  </Observability>
+
+  <AutonomyPolicy>
+    <default-execution-profile>balanced</default-execution-profile>
+    <max-fix-attempts-per-step>2</max-fix-attempts-per-step>
+    <replan-trigger>Отсутствие Redis/API контрактов, противоречие с docs.</replan-trigger>
+    <checkpoint-requirement>См. ExecutionPacket в operational-packets.xml</checkpoint-requirement>
+  </AutonomyPolicy>
+
+  <DeliveryShape>
+    <shape>Монорепо npm workspaces.</shape>
+    <shape>Compose: см. корневой docker-compose.yml; запуск через scripts/docker-start.sh или scripts/docker-start.ps1; UI доступен на хост-порте 8080 с прокси /api на сервис api.</shape>
+  </DeliveryShape>
+</TechnologyStack>

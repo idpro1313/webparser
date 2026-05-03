@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<KnowledgeGraph>
+  <Project NAME="webparser" VERSION="0.2.0">
+    <keywords>web-parser, openai-compatible, markdown, bullmq</keywords>
+    <annotation>Монорепо: доменная логика в packages/core; API/worker/UI в apps/*.</annotation>
+
+    <M-CONFIG NAME="Config" TYPE="UTILITY" STATUS="implemented">
+      <purpose>Загрузка конфигурации из env для API, worker и core helper.</purpose>
+      <path>packages/core/src/config.ts</path>
+      <depends>нет</depends>
+      <verification-ref>V-M-CONFIG</verification-ref>
+      <annotations>
+        <fn-loadAppConfig PURPOSE="Валидирует и возвращает AppConfig" />
+        <type-AppConfig PURPOSE="Тип приложения конфигурации" />
+      </annotations>
+    </M-CONFIG>
+
+    <M-LOGGER NAME="LoggerFactory" TYPE="UTILITY" STATUS="implemented">
+      <purpose>Структурированное логирование с корреляцией jobId.</purpose>
+      <path>packages/core/src/logger.ts</path>
+      <depends>M-CONFIG</depends>
+      <verification-ref>V-M-LOGGER</verification-ref>
+      <annotations>
+        <fn-createLogger PURPOSE="Создание именованного pino/logger" />
+      </annotations>
+    </M-LOGGER>
+
+    <M-WEBSITE-FETCHER NAME="WebsiteFetcher" TYPE="INTEGRATION" STATUS="implemented">
+      <purpose>HTTP загрузка HTML с таймаутом и лимитом размера.</purpose>
+      <path>packages/core/src/website-fetcher.ts</path>
+      <depends>M-CONFIG, M-LOGGER</depends>
+      <verification-ref>V-M-WEBSITE-FETCHER</verification-ref>
+      <annotations>
+        <fn-fetchPage PURPOSE="GET HTML страницы" />
+        <type-FetchedPage PURPOSE="Результат загрузки" />
+      </annotations>
+    </M-WEBSITE-FETCHER>
+
+    <M-CONTENT-EXTRACTOR NAME="ContentExtractor" TYPE="CORE_LOGIC" STATUS="implemented">
+      <purpose>Извлечение основного текста и метаданных из HTML.</purpose>
+      <path>packages/core/src/content-extractor.ts</path>
+      <depends>M-LOGGER</depends>
+      <verification-ref>V-M-CONTENT-EXTRACTOR</verification-ref>
+      <annotations>
+        <fn-extractMainContent PURPOSE="ExtractedDocument из HTML" />
+      </annotations>
+    </M-CONTENT-EXTRACTOR>
+
+    <M-AI-ADAPTER NAME="AiSelectionAdapter" TYPE="INTEGRATION" STATUS="implemented">
+      <purpose>OpenAI-compatible chat completions для структурированной выжимки.</purpose>
+      <path>packages/core/src/ai-adapter.ts</path>
+      <depends>M-CONFIG, M-LOGGER</depends>
+      <verification-ref>V-M-AI-ADAPTER</verification-ref>
+      <annotations>
+        <fn-selectKeyInformation PURPOSE="Вызов LLM и парсинг JSON" />
+      </annotations>
+    </M-AI-ADAPTER>
+
+    <M-MARKDOWN-EXPORTER NAME="MarkdownExporter" TYPE="DATA_LAYER" STATUS="implemented">
+      <purpose>Запись Markdown артефактов на диск.</purpose>
+      <path>packages/core/src/markdown-exporter.ts</path>
+      <depends>M-LOGGER</depends>
+      <verification-ref>V-M-MARKDOWN-EXPORTER</verification-ref>
+      <annotations>
+        <fn-writeResultFiles PURPOSE="index.md + pages/*.md" />
+      </annotations>
+    </M-MARKDOWN-EXPORTER>
+
+    <M-JOB-ORCHESTRATOR NAME="ParseJobOrchestrator" TYPE="CORE_LOGIC" STATUS="implemented">
+      <purpose>Оркестрация полного сценария парсинга.</purpose>
+      <path>packages/core/src/orchestrator.ts</path>
+      <depends>M-WEBSITE-FETCHER, M-CONTENT-EXTRACTOR, M-AI-ADAPTER, M-MARKDOWN-EXPORTER, M-LOGGER</depends>
+      <verification-ref>V-M-JOB-ORCHESTRATOR</verification-ref>
+      <annotations>
+        <fn-runParseJob PURPOSE="Запуск одной задачи" />
+      </annotations>
+    </M-JOB-ORCHESTRATOR>
+
+    <M-JOB-QUEUE NAME="ParseJobQueueAdapter" TYPE="INTEGRATION" STATUS="implemented">
+      <purpose>BullMQ постановка задач.</purpose>
+      <path>apps/api/src/queue.ts</path>
+      <depends>M-CONFIG, M-LOGGER</depends>
+      <verification-ref>V-M-JOB-QUEUE</verification-ref>
+    </M-JOB-QUEUE>
+
+    <M-HTTP-API NAME="HttpApiServer" TYPE="ENTRY_POINT" STATUS="implemented">
+      <purpose>HTTP API для UI и интеграций; health/readiness для оркестрации.</purpose>
+      <path>apps/api/src/index.ts</path>
+      <depends>M-JOB-QUEUE, M-CONFIG, M-LOGGER</depends>
+      <verification-ref>V-M-HTTP-API</verification-ref>
+      <annotations>
+        <route-health PURPOSE="GET /api/health — ливность" />
+        <route-ready PURPOSE="GET /api/ready — Redis PING" />
+      </annotations>
+    </M-HTTP-API>
+
+    <M-WORKER-ENTRY NAME="ParseWorkerProcess" TYPE="ENTRY_POINT" STATUS="implemented">
+      <purpose>Worker процесс BullMQ.</purpose>
+      <path>apps/worker/src/index.ts</path>
+      <depends>M-JOB-ORCHESTRATOR, M-CONFIG, M-LOGGER</depends>
+      <verification-ref>V-M-WORKER-ENTRY</verification-ref>
+    </M-WORKER-ENTRY>
+
+    <M-WEB-UI NAME="WebConsole" TYPE="UI_COMPONENT" STATUS="implemented">
+      <purpose>React UI.</purpose>
+      <path>apps/web/src/App.tsx</path>
+      <depends>M-HTTP-API</depends>
+      <verification-ref>V-M-WEB-UI</verification-ref>
+    </M-WEB-UI>
+
+    <CrossLink from="M-HTTP-API" to="M-JOB-QUEUE" relation="enqueues-jobs" />
+    <CrossLink from="M-WORKER-ENTRY" to="M-JOB-ORCHESTRATOR" relation="runs-parse-flow" />
+    <CrossLink from="M-JOB-ORCHESTRATOR" to="M-WEBSITE-FETCHER" relation="requires-fetch" />
+    <CrossLink from="M-JOB-ORCHESTRATOR" to="M-CONTENT-EXTRACTOR" relation="requires-extract" />
+    <CrossLink from="M-JOB-ORCHESTRATOR" to="M-AI-ADAPTER" relation="requires-ai" />
+    <CrossLink from="M-JOB-ORCHESTRATOR" to="M-MARKDOWN-EXPORTER" relation="persist-md" />
+  </Project>
+</KnowledgeGraph>
