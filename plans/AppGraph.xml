@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<KnowledgeGraph>
+  <Webparser_Info TYPE="PROJECT_INFO">
+    <keywords>web-parser, openai-compatible, markdown, bullmq, Fastify</keywords>
+    <annotation>Монорепо: core pipeline + API + worker + React UI.</annotation>
+    <BusinessScenarios>
+      <Scenario NAME="Enqueue">POST /api/jobs → BullMQ</Scenario>
+      <Scenario NAME="Process">Worker → runParseJob → MD on disk</Scenario>
+      <Scenario NAME="Poll">GET /api/jobs/:id → state + files</Scenario>
+    </BusinessScenarios>
+  </Webparser_Info>
+
+  <packages_core_config_ts FILE="packages/core/src/config.ts" TYPE="UTILITY_MODULE">
+    <annotation>M-CONFIG</annotation>
+  </packages_core_config_ts>
+  <packages_core_logger_ts FILE="packages/core/src/logger.ts" TYPE="UTILITY_MODULE">
+    <annotation>M-LOGGER</annotation>
+    <CrossLinks><Link TARGET="packages_core_config_ts" TYPE="DEPENDS" /></CrossLinks>
+  </packages_core_logger_ts>
+  <packages_core_website_fetcher_ts FILE="packages/core/src/website-fetcher.ts" TYPE="INTEGRATION_MODULE">
+    <annotation>M-WEBSITE-FETCHER</annotation>
+    <CrossLinks>
+      <Link TARGET="packages_core_config_ts" TYPE="CONFIG" />
+      <Link TARGET="packages_core_logger_ts" TYPE="LOGS" />
+    </CrossLinks>
+  </packages_core_website_fetcher_ts>
+  <packages_core_content_extractor_ts FILE="packages/core/src/content-extractor.ts" TYPE="CORE_LOGIC_MODULE">
+    <annotation>M-CONTENT-EXTRACTOR</annotation>
+    <CrossLinks><Link TARGET="packages_core_logger_ts" TYPE="LOGS" /></CrossLinks>
+  </packages_core_content_extractor_ts>
+  <packages_core_ai_adapter_ts FILE="packages/core/src/ai-adapter.ts" TYPE="INTEGRATION_MODULE">
+    <annotation>M-AI-ADAPTER</annotation>
+    <CrossLinks>
+      <Link TARGET="packages_core_config_ts" TYPE="CONFIG" />
+      <Link TARGET="packages_core_logger_ts" TYPE="LOGS" />
+    </CrossLinks>
+  </packages_core_ai_adapter_ts>
+  <packages_core_markdown_exporter_ts FILE="packages/core/src/markdown-exporter.ts" TYPE="DATA_LAYER_MODULE">
+    <annotation>M-MARKDOWN-EXPORTER</annotation>
+    <CrossLinks><Link TARGET="packages_core_logger_ts" TYPE="LOGS" /></CrossLinks>
+  </packages_core_markdown_exporter_ts>
+  <packages_core_orchestrator_ts FILE="packages/core/src/orchestrator.ts" TYPE="CORE_LOGIC_MODULE">
+    <annotation>M-JOB-ORCHESTRATOR</annotation>
+    <CrossLinks>
+      <Link TARGET="packages_core_website_fetcher_ts" TYPE="FETCH" />
+      <Link TARGET="packages_core_content_extractor_ts" TYPE="EXTRACT" />
+      <Link TARGET="packages_core_ai_adapter_ts" TYPE="AI" />
+      <Link TARGET="packages_core_markdown_exporter_ts" TYPE="EXPORT" />
+      <Link TARGET="packages_core_logger_ts" TYPE="LOGS" />
+    </CrossLinks>
+  </packages_core_orchestrator_ts>
+
+  <apps_api_queue_ts FILE="apps/api/src/queue.ts" TYPE="INTEGRATION_MODULE">
+    <annotation>M-JOB-QUEUE</annotation>
+    <CrossLinks>
+      <Link TARGET="packages_core_config_ts" TYPE="CONFIG" />
+      <Link TARGET="packages_core_logger_ts" TYPE="LOGS" />
+    </CrossLinks>
+  </apps_api_queue_ts>
+  <apps_api_index_ts FILE="apps/api/src/index.ts" TYPE="ENTRY_POINT">
+    <annotation>M-HTTP-API: health, ready, jobs</annotation>
+    <CrossLinks>
+      <Link TARGET="apps_api_queue_ts" TYPE="ENQUEUES" />
+      <Link TARGET="packages_core_config_ts" TYPE="CONFIG" />
+    </CrossLinks>
+  </apps_api_index_ts>
+  <apps_worker_index_ts FILE="apps/worker/src/index.ts" TYPE="ENTRY_POINT">
+    <annotation>M-WORKER-ENTRY</annotation>
+    <CrossLinks>
+      <Link TARGET="packages_core_orchestrator_ts" TYPE="RUNS_PARSE" />
+      <Link TARGET="packages_core_config_ts" TYPE="CONFIG" />
+    </CrossLinks>
+  </apps_worker_index_ts>
+  <apps_web_src_DIR FILE="apps/web/src/" TYPE="UI_MODULE">
+    <annotation>M-WEB-UI</annotation>
+    <CrossLinks><Link TARGET="apps_api_index_ts" TYPE="HTTP_CLIENT" /></CrossLinks>
+  </apps_web_src_DIR>
+
+  <ProjectCrossLinks TYPE="MODULE_INTERACTIONS_OVERVIEW">
+    <Link TARGET="apps_api_index_ts" TYPE="API_ENTRY" />
+    <Link TARGET="apps_worker_index_ts" TYPE="WORKER_ENTRY" />
+    <Link TARGET="packages_core_orchestrator_ts" TYPE="DOMAIN_PIPELINE" />
+  </ProjectCrossLinks>
+</KnowledgeGraph>

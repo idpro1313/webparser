@@ -9,3 +9,14 @@ output/
 .DS_Store
 coverage/
 *.tsbuildinfo
+
+# Вспомогательные артефакты агента (отчёты, черновики) — см. agent-rules.mdc §7
+work/*
+!work/README.md
+
+# Doxygen
+doxygen_output/
+*.tag
+
+# Журнал агента (agent-rules.mdc)
+docs/HISTORY.md

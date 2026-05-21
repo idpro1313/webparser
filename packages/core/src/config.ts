@@ -2,7 +2,7 @@
 // PURPOSE: Load and validate environment-driven configuration used by worker/API and core parsers.
 // SCOPE: env parsing only; secrets must never be logged.
 // DEPENDS: none.
-// LINKS: M-CONFIG, docs/knowledge-graph.xml.
+// LINKS: M-CONFIG, plans/AppGraph.xml.
 // END_MODULE_CONTRACT
 
 // START_MODULE_MAP

@@ -2,7 +2,7 @@
 // PURPOSE: Create structured JSON loggers for API, worker, and core modules.
 // SCOPE: pino factory wrappers; correlation fields (jobId) added by callers via child().
 // DEPENDS: pino (runtime).
-// LINKS: M-LOGGER, docs/verification-plan.xml (V-M-LOGGER).
+// LINKS: M-LOGGER, tests/test_guide.md (V-M-LOGGER).
 // END_MODULE_CONTRACT
 
 // START_MODULE_MAP

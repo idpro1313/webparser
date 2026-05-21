@@ -1,0 +1,87 @@
+# Doxygen — webparser (webparser)
+# Grace 2: разметка ## @* , GREP_SUMMARY. Запуск: doxygen Doxyfile
+
+# =============================================
+# 1. Проект
+# =============================================
+PROJECT_NAME           = "webparser"
+PROJECT_BRIEF          = "Умный парсер веб-страниц (monorepo TS)"
+PROJECT_NUMBER         = 0.1.0
+OUTPUT_DIRECTORY       = doxygen_output
+
+# =============================================
+# 2. Вход
+# =============================================
+INPUT                  = packages apps
+FILE_PATTERNS          = *.ts
+RECURSIVE              = YES
+EXCLUDE                = doxygen_output \
+                         work \
+                         plans \
+                         tests \
+                         .cursor \
+                         .kilocode \
+                         docs
+EXCLUDE_PATTERNS       = */.venv/* \
+                         */venv/* \
+                         */__pycache__/* \
+                         */.pytest_cache/* \
+                         */node_modules/* \
+                         */dist/* \
+                         */build/* \
+                         */*.test.ts
+
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+
+# =============================================
+# 3. Вывод (HTML + XML для агентов)
+# =============================================
+GENERATE_HTML          = YES
+GENERATE_XML           = YES
+GENERATE_RTF           = NO
+GENERATE_TREEVIEW      = YES
+XML_PROGRAMLISTING     = NO
+
+# =============================================
+# 4. Препроцессор (PHP / TypeScript)
+# =============================================
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+
+# =============================================
+# 5. Алиасы Grace 2
+# =============================================
+ALIASES = "tags=@par Tags:^^" \
+          "uses=@par Uses API:^^" \
+          "complexity=@par Complexity Score:^^" \
+          "io=@par I/O:^^" \
+          "modulecontract=@par <b>Module Contract</b>^^" \
+          "purpose=@par Purpose:^^" \
+          "scope=@par Scope:^^" \
+          "input=@par Input:^^" \
+          "output=@par Output:^^" \
+          "links=@par Links:^^" \
+          "invariants=@par Invariants:^^" \
+          "rationale=@par Rationale:^^" \
+          "changes=@par Change Summary:^^" \
+          "modulemap=@par Module Map:^^" \
+          "usecases=@par Use Cases:^^" \
+          "links_to_spec=@par Links to Specification:^^"
+
+# =============================================
+# 6. Предупреждения и tagfile
+# =============================================
+GENERATE_TAGFILE       = webparser.tag
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+
+# =============================================
+# 7. Иерархия (без Graphviz)
+# =============================================
+HAVE_DOT               = NO
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+UML_LOOK               = YES
+GRAPHICAL_HIERARCHY    = YES

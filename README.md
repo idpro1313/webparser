@@ -76,13 +76,12 @@ Markdown по задачам пишется в volume **`webparser_output`** д�
 - `GET /api/jobs/:id` — состояние BullMQ job (`state`, `returnvalue`, `failedReason`)
 - `GET /api/jobs/:id/files` — список сохранённых файлов задачи под `OUTPUT_DIR/<jobId>/`
 
-## Документы GRACE
+## Карта агента (Grace 2)
 
-- [`docs/requirements.xml`](docs/requirements.xml)
-- [`docs/technology.xml`](docs/technology.xml)
-- [`docs/development-plan.xml`](docs/development-plan.xml)
-- [`docs/verification-plan.xml`](docs/verification-plan.xml)
-- [`docs/knowledge-graph.xml`](docs/knowledge-graph.xml)
+- [`plans/DevelopmentPlan.md`](plans/DevelopmentPlan.md)
+- [`plans/AppGraph.xml`](plans/AppGraph.xml)
+- [`plans/business_requirements.md`](plans/business_requirements.md)
+- [`tests/test_guide.md`](tests/test_guide.md)
 
 ## Тесты
 

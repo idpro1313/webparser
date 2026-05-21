@@ -1,5 +1,5 @@
 {
-  // Проектные правила GRACE для Kilo Code.
-  // Если в целевом проекте уже есть kilo.jsonc, объедините настройки вручную.
-  "instructions": [".kilo/rules/*.md"]
+  // Подключение правил Grace 2.0 для Kilo Code.
+  // Если kilo.jsonc уже есть в проекте — объедините массив instructions вручную.
+  "instructions": [".kilocode/rules/*.md"]
 }
