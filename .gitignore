@@ -18,11 +18,14 @@ work/*
 doxygen_output/
 *.tag
 
-# Cursor / Kilo Code — только локально
+# Cursor / Kilo Code / Doxygen — только локально
 .cursor/
 .kilocode/
 .kilo/
 Prompts.xml
+Doxyfile
+kilo.json
+kilo.jsonc
 
 # Журнал агента (agent-rules.mdc)
 docs/HISTORY.md
