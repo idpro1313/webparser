@@ -22,6 +22,7 @@ doxygen_output/
 .cursor/
 .kilocode/
 .kilo/
+Prompts.xml
 
 # Журнал агента (agent-rules.mdc)
 docs/HISTORY.md
